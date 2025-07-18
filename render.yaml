@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: noroa-product-agent
+    env: python
+    buildCommand: ""
+    startCommand: gunicorn main:app
+    plan: free
+    envVars:
+      - key: SHOPIFY_TOKEN
+        sync: false
+      - key: SHOPIFY_STORE
+        sync: false
+
