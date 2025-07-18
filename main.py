@@ -1,34 +1,44 @@
 from flask import Flask, request, jsonify
+import os
+import requests
 
 app = Flask(__name__)
 
-@app.route("/webhook", methods=["POST"])
+SHOPIFY_API_KEY = os.getenv("SHOPIFY_API_KEY")
+SHOPIFY_API_URL = os.getenv("SHOPIFY_API_URL")
+SHOPIFY_TOKEN = os.getenv("SHOPIFY_TOKEN")
+
+@app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.json
+    try:
+        data = request.get_json()
+        print("Received data:", data)
 
-    product_data = {
-        "product": {
-            "title": data.get("title"),
-            "body_html": data.get("body_html"),
-            "vendor": data.get("vendor"),
-            "product_type": data.get("product_type"),
-            "variants": [
-                {
-                    "price": data.get("price")
-                }
-            ]
+        headers = {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": SHOPIFY_TOKEN
         }
-    }
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": os.getenv("SHOPIFY_ADMIN_API_ACCESS_TOKEN")
-    }
+        response = requests.post(
+            f"{SHOPIFY_API_URL}/products.json",
+            headers=headers,
+            json={"product": data}
+        )
 
-    response = requests.post(
-        f"{os.getenv('SHOPIFY_ADMIN_URL')}/products.json",
-        headers=headers,
-        data=json.dumps(product_data)
-    )
+        print("Shopify response:", response.text)
 
-    return jsonify(response.json())
+        if response.status_code == 201:
+            return jsonify({"status": "success", "shopify": response.json()})
+        else:
+            return jsonify({
+                "status": "error",
+                "shopify": response.json(),
+                "code": response.status_code
+            }), response.status_code
+
+    except Exception as e:
+        print("Webhook error:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
