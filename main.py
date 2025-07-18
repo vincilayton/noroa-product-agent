@@ -2,20 +2,19 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route('/webhook', methods=['POST'])
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.get_json()
+    data = request.json
 
-    # Add to Shopify
-    product_payload = {
+    product_data = {
         "product": {
-            "title": data['title'],
-            "body_html": data['body_html'],
-            "vendor": data['vendor'],
-            "product_type": data['product_type'],
+            "title": data.get("title"),
+            "body_html": data.get("body_html"),
+            "vendor": data.get("vendor"),
+            "product_type": data.get("product_type"),
             "variants": [
                 {
-                    "price": data['price']
+                    "price": data.get("price")
                 }
             ]
         }
@@ -23,13 +22,13 @@ def webhook():
 
     headers = {
         "Content-Type": "application/json",
-        "X-Shopify-Access-Token": os.getenv("SHOPIFY_TOKEN")
+        "X-Shopify-Access-Token": os.getenv("SHOPIFY_ADMIN_API_ACCESS_TOKEN")
     }
 
-    shopify_url = f"https://{os.getenv('SHOPIFY_DOMAIN')}/admin/api/2023-10/products.json"
-    response = requests.post(shopify_url, headers=headers, json=product_payload)
+    response = requests.post(
+        f"{os.getenv('SHOPIFY_ADMIN_URL')}/products.json",
+        headers=headers,
+        data=json.dumps(product_data)
+    )
 
-    return jsonify({
-        "status": "sent to Shopify",
-        "shopify_response": response.json()
-    })
+    return jsonify(response.json())
